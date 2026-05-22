@@ -10,6 +10,7 @@ import cookieParser from 'cookie-parser';
 import pool, { initDb } from './database.js';
 import Log, { connectMongo, registrarLog } from './mongodb.js';
 
+// @ts-ignore
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

@@ -26,46 +26,17 @@ interface LogEntry {
   template: `
     <section class="section">
       <div class="container" style="max-width: 800px;">
-        <div class="box">
-          <div class="level is-mobile">
-            <div class="level-left">
-              <h1 class="title has-text-primary">Minhas Tarefas</h1>
-            </div>
-            <div class="level-right">
-              <button class="button is-small is-info is-light" (click)="toggleLogs()">
-                {{ mostrarLogs() ? 'Ocultar Logs' : 'Ver Logs do Sistema' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Painel de Logs (Condicional) -->
-          @if (mostrarLogs()) {
-            <div class="notification is-info is-light mb-5">
-              <button class="delete" (click)="toggleLogs()"></button>
-              <h2 class="subtitle is-6 has-text-weight-bold mb-2">Logs de Atividade (MongoDB)</h2>
-              <div class="log-container" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;">
-                @for (log of logs(); track log._id) {
-                  <div class="log-entry mb-1 border-bottom">
-                    <span class="has-text-grey">{{ log.timestamp | date:'HH:mm:ss' }}</span> - 
-                    <span class="has-text-weight-bold" [ngClass]="getLogClass(log.acao)">{{ log.acao }}</span>: 
-                    Tarefa #{{ log.tarefaId }}
-                    @if (log.detalhes?.titulo) {
-                       - <span class="is-italic">"{{ log.detalhes.titulo }}"</span>
-                    }
-                  </div>
-                } @empty {
-                  <p class="has-text-grey-light">Nenhum log registrado ainda...</p>
-                }
-              </div>
-            </div>
-          }
-
-          <!-- Estatísticas -->
-          <div class="level is-mobile mb-5">
-            <div class="level-item has-text-centered">
-              <div>
-                <p class="heading">Total</p>
-                <p class="title is-5">{{ totalTarefas() }}</p>
+        
+        <!-- Tela de Login -->
+        @if (!usuarioLogado()) {
+          <div class="column is-4 is-offset-4">
+            <div class="box mt-6">
+              <h2 class="title has-text-centered">Login</h2>
+              <div class="field">
+                <label class="label">Usuário</label>
+                <div class="control">
+                  <input class="input" type="text" [(ngModel)]="usernameInput" placeholder="admin">
+                </div>
               </div>
               <div class="field">
                 <label class="label">Senha</label>
@@ -319,9 +290,11 @@ export class App implements OnInit {
   passwordInput = signal('');
   novaSenhaInput = signal('');
   loginErro = signal('');
-  
+
+  // Logs
   logs = signal<LogEntry[]>([]);
   mostrarLogs = signal(false);
+
   // Propriedades Computadas
   totalTarefas = computed(() => this.tarefas().length);
   tarefasConcluidas = computed(() => this.tarefas().filter(t => t.concluido).length);
@@ -376,10 +349,6 @@ export class App implements OnInit {
     this.http.get<Tarefa[]>(this.apiUrl).subscribe({
       next: (data) => {
         this.tarefas.set(data);
-        // Se carregou com sucesso, assume que está logado (simplificação para este exemplo)
-        if (!this.usuarioLogado()) {
-           // Em um app real, você teria um endpoint /me para validar a sessão
-        }
       },
       error: (err) => {
         if (err.status === 401) this.usuarioLogado.set(null);
