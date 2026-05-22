@@ -1,0 +1,59 @@
+services:
+  # Banco de Dados MySQL (Tarefas e Usuários)
+  mysql_db:
+    image: mysql:8.0
+    container_name: mysql_desafio
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: desafio_essentia
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  # Banco de Dados MongoDB (Logs)
+  mongodb_logs:
+    image: mongo:latest
+    container_name: mongodb_desafio
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: desafio_logs
+    volumes:
+      - mongodb_data:/data/db
+
+  # Backend (API)
+  api:
+    build: ./api
+    container_name: api_desafio
+    restart: always
+    ports:
+      - "8085:8085"
+    depends_on:
+      - mysql_db
+      - mongodb_logs
+    environment:
+      DB_HOST: mysql_db
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: desafio_essentia
+      MONGODB_URI: mongodb://mongodb_logs:27017/desafio_logs
+      PORTA_SERVIDOR: 8085
+      JWT_SECRET: sua_chave_secreta_super_segura_123
+      JWT_EXPIRES_IN: 1h
+
+  # Frontend (Cliente)
+  cliente:
+    build: ./cliente
+    container_name: cliente_desafio
+    restart: always
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+
+volumes:
+  mysql_data:
+  mongodb_data:
