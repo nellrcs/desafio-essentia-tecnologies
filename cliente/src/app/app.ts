@@ -15,143 +15,118 @@ interface Tarefa {
   standalone: true,
   imports: [FormsModule],
   template: `
-    <div class="container">
-      <h1>Minhas Tarefas</h1>
+    <section class="section">
+      <div class="container" style="max-width: 800px;">
+        <div class="box">
+          <h1 class="title has-text-centered has-text-primary">Minhas Tarefas</h1>
 
-      <div class="add-tarefa">
-        <input 
-          type="text" 
-          [(ngModel)]="novoTitulo" 
-          placeholder="O que precisa ser feito?"
-          (keyup.enter)="addTarefa()"
-        >
-        <button (click)="addTarefa()" [disabled]="!novoTitulo()">Adicionar</button>
-      </div>
-
-      <ul class="tarefa-list">
-        @for (tarefa of tarefas(); track tarefa.id) {
-          <li class="tarefa-item" [class.concluida]="tarefa.concluido" [class.editando]="tarefaEditando() === tarefa.id">
-            <input 
-              type="checkbox" 
-              [checked]="tarefa.concluido" 
-              (change)="toggleTarefa(tarefa)"
-              [disabled]="tarefaEditando() === tarefa.id"
-            >
-            
-            @if (tarefaEditando() === tarefa.id) {
+          <div class="field has-addons mb-5">
+            <div class="control is-expanded">
               <input 
+                class="input is-primary"
                 type="text" 
-                [(ngModel)]="tituloEditando" 
-                class="input-edit"
-                (keyup.enter)="salvarEdicao(tarefa)"
-                (keyup.escape)="cancelarEdicao()"
-                autoFocus
+                [(ngModel)]="novoTitulo" 
+                placeholder="O que precisa ser feito?"
+                (keyup.enter)="addTarefa()"
               >
-              <div class="actions">
-                <button class="btn-save" (click)="salvarEdicao(tarefa)">Salvar</button>
-                <button class="btn-cancel" (click)="cancelarEdicao()">Cancelar</button>
+            </div>
+            <div class="control">
+              <button 
+                class="button is-primary" 
+                (click)="addTarefa()" 
+                [disabled]="!novoTitulo()"
+              >
+                <strong>Adicionar</strong>
+              </button>
+            </div>
+          </div>
+
+          <div class="tarefa-list">
+            @for (tarefa of tarefas(); track tarefa.id) {
+              <div class="card mb-3" [class.is-concluida]="tarefa.concluido">
+                <div class="card-content py-3 px-4">
+                  <div class="level is-mobile">
+                    <div class="level-left is-flex-grow-1">
+                      <div class="level-item mr-3">
+                        <label class="checkbox">
+                          <input 
+                            type="checkbox" 
+                            [checked]="tarefa.concluido" 
+                            (change)="toggleTarefa(tarefa)"
+                            [disabled]="tarefaEditando() === tarefa.id"
+                          >
+                        </label>
+                      </div>
+                      
+                      <div class="level-item is-flex-grow-1" style="justify-content: flex-start;">
+                        @if (tarefaEditando() === tarefa.id) {
+                          <div class="field is-grouped is-flex-grow-1">
+                            <div class="control is-expanded">
+                              <input 
+                                class="input is-small is-info"
+                                type="text" 
+                                [(ngModel)]="tituloEditando" 
+                                (keyup.enter)="salvarEdicao(tarefa)"
+                                (keyup.escape)="cancelarEdicao()"
+                                autoFocus
+                              >
+                            </div>
+                          </div>
+                        } @else {
+                          <span class="is-size-5 titulo-texto" [style.text-decoration]="tarefa.concluido ? 'line-through' : 'none'" [style.color]="tarefa.concluido ? '#aaa' : 'inherit'">
+                            {{ tarefa.titulo }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="level-right">
+                      <div class="level-item">
+                        <div class="buttons are-small">
+                          @if (tarefaEditando() === tarefa.id) {
+                            <button class="button is-success is-light" (click)="salvarEdicao(tarefa)">
+                              <span>Salvar</span>
+                            </button>
+                            <button class="button is-light" (click)="cancelarEdicao()">
+                              <span>Cancelar</span>
+                            </button>
+                          } @else {
+                            <button class="button is-info is-light" (click)="iniciarEdicao(tarefa)">
+                              <span>Editar</span>
+                            </button>
+                            <button class="button is-danger is-light" (click)="deleteTarefa(tarefa.id)">
+                              <span>Remover</span>
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            } @else {
-              <span class="titulo">{{ tarefa.titulo }}</span>
-              <div class="actions">
-                <button class="btn-edit" (click)="iniciarEdicao(tarefa)">Editar</button>
-                <button class="btn-delete" (click)="deleteTarefa(tarefa.id)">Remover</button>
+            } @empty {
+              <div class="notification is-light has-text-centered mt-4">
+                <p>Nenhuma tarefa encontrada. Que tal adicionar uma?</p>
               </div>
             }
-          </li>
-        } @empty {
-          <p>Nenhuma tarefa encontrada.</p>
-        }
-      </ul>
-    </div>
+          </div>
+        </div>
+      </div>
+    </section>
   `,
   styles: [`
-    .container {
-      max-width: 600px;
-      margin: 2rem auto;
-      padding: 1rem;
-      font-family: sans-serif;
+    .is-concluida {
+      background-color: #f9f9f9;
+      border-left: 4px solid #dbdbdb;
     }
-    .add-tarefa {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 2rem;
+    .card {
+      transition: all 0.2s ease;
     }
-    .add-tarefa input {
-      flex: 1;
-      padding: 8px;
-      font-size: 1rem;
+    .card:hover {
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    .tarefa-list {
-      list-style: none;
-      padding: 0;
-    }
-    .tarefa-item {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      border-bottom: 1px solid #eee;
-      gap: 10px;
-    }
-    .tarefa-item.concluida .titulo {
-      text-decoration: line-through;
-      color: #888;
-    }
-    .titulo {
-      flex: 1;
-    }
-    .input-edit {
-      flex: 1;
-      padding: 5px;
-      font-size: 1rem;
-    }
-    .actions {
-      display: flex;
-      gap: 5px;
-    }
-    .btn-delete {
-      background: #ff4444;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .btn-delete:hover {
-      background: #cc0000;
-    }
-    .btn-edit {
-      background: #44aaff;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .btn-edit:hover {
-      background: #0088ff;
-    }
-    .btn-save {
-      background: #44bb44;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .btn-save:hover {
-      background: #339933;
-    }
-    .btn-cancel {
-      background: #888;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .btn-cancel:hover {
-      background: #666;
+    .titulo-texto {
+      word-break: break-all;
     }
   `],
 })
