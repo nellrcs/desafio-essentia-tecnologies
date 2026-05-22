@@ -95,7 +95,7 @@ interface Tarefa {
 })
 export class App implements OnInit {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8083/tarefas';
+  private apiUrl = 'http://localhost:8085/tarefas';
 
   tarefas = signal<Tarefa[]>([]);
   novoTitulo = signal('');

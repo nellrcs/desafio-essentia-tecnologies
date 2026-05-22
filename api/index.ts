@@ -1,174 +1,145 @@
 import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import pool, { initDb } from './database.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
-const PORT = process.env.PORT || 8083;
+const PORT = process.env.PORTA_SERVIDOR || 8083;
 
-//app.use(cors());
+// Inicializa o banco de dados
+initDb();
 
 app.use(cors({
-  origin: '*', 
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200 
+  optionsSuccessStatus: 200
 }));
-
-app.options('*', cors()); 
 
 app.use(express.json());
 
-interface Tarefa {
-  id: number;
-  titulo: string;
-  descricao: string;
-  concluido: boolean;
-  dataCriacao: Date;
-}
 
-let tarefas: Tarefa[] = [
-  {
-    id: 1,
-    titulo: 'Levar o lixo',
-    descricao: 'Leva o lixo pra fora',
-    concluido: false,
-    dataCriacao: new Date(),
-  },
-  {
-    id: 2,
-    titulo: 'Banho no cachorro',
-    descricao: 'Dar banhho no cachorro',
-    concluido: true,
-    dataCriacao: new Date(),
-  },
-];
-
-app.get('/tarefas', (req, res) => {
-  res.json(tarefas);
-});
-
-app.get('/tarefas/:id', (req, res) => {
-  const id = Number(req.params.id);
-
-  const tarefa = tarefas.find((t) => t.id === id);
-
-  if (!tarefa) {
-    return res.status(404).json({
-      message: 'Tarefa não encontrada',
-    });
+app.get('/tarefas', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM tarefas ORDER BY dataCriacao DESC');
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar tarefas', error });
   }
-  res.json(tarefa);
 });
 
-app.post('/tarefas', (req, res) => {
+app.get('/tarefas/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Tarefa não encontrada' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar tarefa', error });
+  }
+});
+
+app.post('/tarefas', async (req, res) => {
   const { titulo, descricao } = req.body;
-
   if (!titulo) {
-    return res.status(400).json({
-      message: 'O campo titulo é obrigatório',
-    });
+    return res.status(400).json({ message: 'O campo titulo é obrigatório' });
   }
-
-  const newTarefa: Tarefa = {
-    id: tarefas.length > 0 ? tarefas[tarefas.length - 1].id + 1 : 1,
-    titulo,
-    descricao: descricao || '',
-    concluido: false,
-    dataCriacao: new Date(),
-  };
-
-  tarefas.push(newTarefa);
-
-  res.status(201).json({
-    message: 'Tarefa criada com sucesso',
-    tarefa: newTarefa,
-  });
+  try {
+    const [result]: any = await pool.query(
+      'INSERT INTO tarefas (titulo, descricao) VALUES (?, ?)',
+      [titulo, descricao || '']
+    );
+    const [newRows]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [result.insertId]);
+    res.status(201).json({
+      message: 'Tarefa criada com sucesso',
+      tarefa: newRows[0],
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao criar tarefa', error });
+  }
 });
 
-app.put('/tarefas/:id', (req, res) => {
-  const id = Number(req.params.id);
-
+app.put('/tarefas/:id', async (req, res) => {
+  const { id } = req.params;
   const { titulo, descricao, concluido } = req.body;
-
-  const tarefaIndex = tarefas.findIndex((t) => t.id === id);
-
-  if (tarefaIndex === -1) {
-    return res.status(404).json({
-      message: 'Tarefa não encontrada',
+  try {
+    const [existing]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ message: 'Tarefa não encontrada' });
+    }
+    const updatedTitulo = titulo ?? existing[0].titulo;
+    const updatedDescricao = descricao ?? existing[0].descricao;
+    const updatedConcluido = concluido ?? existing[0].concluido;
+    await pool.query(
+      'UPDATE tarefas SET titulo = ?, descricao = ?, concluido = ? WHERE id = ?',
+      [updatedTitulo, updatedDescricao, updatedConcluido, id]
+    );
+    const [updatedRows]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [id]);
+    res.json({
+      message: 'Tarefa atualizada com sucesso',
+      tarefa: updatedRows[0],
     });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao atualizar tarefa', error });
   }
-
-  tarefas[tarefaIndex] = {
-    ...tarefas[tarefaIndex],
-    titulo: titulo ?? tarefas[tarefaIndex].titulo,
-    descricao: descricao ?? tarefas[tarefaIndex].descricao,
-    concluido: concluido ?? tarefas[tarefaIndex].concluido,
-  };
-
-  res.json({
-    message: 'Tarefa atualizada com sucesso',
-    tarefa: tarefas[tarefaIndex],
-  });
 });
 
-app.patch('/tarefas/:id/complete', (req, res) => {
-  const id = Number(req.params.id);
-
-  const tarefa = tarefas.find((t) => t.id === id);
-
-  if (!tarefa) {
-    return res.status(404).json({
-      message: 'Tarefa não encontrada',
+app.patch('/tarefas/:id/complete', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [result]: any = await pool.query('UPDATE tarefas SET concluido = true WHERE id = ?', [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Tarefa não encontrada' });
+    }
+    const [updatedRows]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [id]);
+    res.json({
+      message: 'Tarefa marcada como concluída',
+      tarefa: updatedRows[0],
     });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao concluir tarefa', error });
   }
-
-  tarefa.concluido = true;
-
-  res.json({
-    message: 'Tarefa marcada como concluída',
-    tarefa,
-  });
 });
 
-app.patch('/tarefas/:id/uncomplete', (req, res) => {
-  const id = Number(req.params.id);
-
-  const tarefa = tarefas.find((t) => t.id === id);
-
-  if (!tarefa) {
-    return res.status(404).json({
-      message: 'Tarefa não encontrada',
+app.patch('/tarefas/:id/uncomplete', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [result]: any = await pool.query('UPDATE tarefas SET concluido = false WHERE id = ?', [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Tarefa não encontrada' });
+    }
+    const [updatedRows]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [id]);
+    res.json({
+      message: 'Tarefa marcada como não concluída',
+      tarefa: updatedRows[0],
     });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao desmarcar tarefa', error });
   }
-
-  tarefa.concluido = false;
-
-  res.json({
-    message: 'Tarefa marcada como não concluída',
-    tarefa,
-  });
 });
 
-app.delete('/tarefas/:id', (req, res) => {
-  const id = Number(req.params.id);
-
-  const tarefaExists = tarefas.some((t) => t.id === id);
-
-  if (!tarefaExists) {
-    return res.status(404).json({
-      message: 'Tarefa não encontrada',
-    });
+app.delete('/tarefas/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [result]: any = await pool.query('DELETE FROM tarefas WHERE id = ?', [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Tarefa não encontrada' });
+    }
+    res.json({ message: 'Tarefa removida com sucesso' });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao remover tarefa', error });
   }
-
-  tarefas = tarefas.filter((t) => t.id !== id);
-
-  res.json({
-    message: 'Tarefa removida com sucesso',
-  });
 });
-
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
-}).on('error', (err) => {
-  console.error('Erro ao iniciar o servidor:', err);
 });
