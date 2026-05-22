@@ -45,6 +45,9 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "define": {
+              "process.env.PORTA_SERVIDOR": "8085"
+            },
             "assets": [
               {
                 "glob": "**/*",

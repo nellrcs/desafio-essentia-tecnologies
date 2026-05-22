@@ -95,7 +95,8 @@ interface Tarefa {
 })
 export class App implements OnInit {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8085/tarefas';
+  // @ts-ignore
+  private apiUrl = `http://localhost:${process.env.PORTA_SERVIDOR || '8085'}/tarefas`;
 
   tarefas = signal<Tarefa[]>([]);
   novoTitulo = signal('');
