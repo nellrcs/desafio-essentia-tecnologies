@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
+
 import pool, { initDb } from './database.js';
 import Log, { connectMongo, registrarLog } from './mongodb.js';
 
@@ -250,7 +251,7 @@ app.delete('/tarefas/:id', autenticar, async (req, res) => {
 
 app.get('/logs', autenticar, async (req, res) => {
   try {
-    const logs = await Log.find().sort({ data: -1 });
+    const logs = await Log.find().sort({ timestamp: -1 }).limit(50);
     res.json(logs);
   } catch (error) {
     res.status(500).json({ message: 'Erro ao buscar logs', error });

@@ -26,17 +26,46 @@ interface LogEntry {
   template: `
     <section class="section">
       <div class="container" style="max-width: 800px;">
-        
-        <!-- Tela de Login -->
-        @if (!usuarioLogado()) {
-          <div class="column is-4 is-offset-4">
-            <div class="box mt-6">
-              <h2 class="title has-text-centered">Login</h2>
-              <div class="field">
-                <label class="label">Usuário</label>
-                <div class="control">
-                  <input class="input" type="text" [(ngModel)]="usernameInput" placeholder="admin">
-                </div>
+        <div class="box">
+          <div class="level is-mobile">
+            <div class="level-left">
+              <h1 class="title has-text-primary">Minhas Tarefas</h1>
+            </div>
+            <div class="level-right">
+              <button class="button is-small is-info is-light" (click)="toggleLogs()">
+                {{ mostrarLogs() ? 'Ocultar Logs' : 'Ver Logs do Sistema' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Painel de Logs (Condicional) -->
+          @if (mostrarLogs()) {
+            <div class="notification is-info is-light mb-5">
+              <button class="delete" (click)="toggleLogs()"></button>
+              <h2 class="subtitle is-6 has-text-weight-bold mb-2">Logs de Atividade (MongoDB)</h2>
+              <div class="log-container" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;">
+                @for (log of logs(); track log._id) {
+                  <div class="log-entry mb-1 border-bottom">
+                    <span class="has-text-grey">{{ log.timestamp | date:'HH:mm:ss' }}</span> - 
+                    <span class="has-text-weight-bold" [ngClass]="getLogClass(log.acao)">{{ log.acao }}</span>: 
+                    Tarefa #{{ log.tarefaId }}
+                    @if (log.detalhes?.titulo) {
+                       - <span class="is-italic">"{{ log.detalhes.titulo }}"</span>
+                    }
+                  </div>
+                } @empty {
+                  <p class="has-text-grey-light">Nenhum log registrado ainda...</p>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Estatísticas -->
+          <div class="level is-mobile mb-5">
+            <div class="level-item has-text-centered">
+              <div>
+                <p class="heading">Total</p>
+                <p class="title is-5">{{ totalTarefas() }}</p>
               </div>
               <div class="field">
                 <label class="label">Senha</label>
@@ -290,7 +319,9 @@ export class App implements OnInit {
   passwordInput = signal('');
   novaSenhaInput = signal('');
   loginErro = signal('');
-
+  
+  logs = signal<LogEntry[]>([]);
+  mostrarLogs = signal(false);
   // Propriedades Computadas
   totalTarefas = computed(() => this.tarefas().length);
   tarefasConcluidas = computed(() => this.tarefas().filter(t => t.concluido).length);
@@ -356,6 +387,27 @@ export class App implements OnInit {
     });
   }
 
+  carregarLogs() {
+    this.http.get<LogEntry[]>(`${this.apiUrl.replace('/tarefas', '')}/logs`).subscribe(data => {
+      this.logs.set(data);
+    });
+  }
+
+  toggleLogs() {
+    const novoEstado = !this.mostrarLogs();
+    this.mostrarLogs.set(novoEstado);
+    if (novoEstado) {
+      this.carregarLogs();
+    }
+  }
+
+  getLogClass(acao: string): string {
+    if (acao.includes('CRIAR')) return 'has-text-success';
+    if (acao.includes('REMOVER')) return 'has-text-danger';
+    if (acao.includes('ATUALIZAR')) return 'has-text-info';
+    return 'has-text-grey';
+  }
+
   addTarefa() {
     if (!this.novoTitulo()) return;
 
@@ -366,6 +418,7 @@ export class App implements OnInit {
       this.tarefas.update(current => [...current, res.tarefa]);
       this.novoTitulo.set('');
       this.novaDescricao.set('');
+      if (this.mostrarLogs()) this.carregarLogs();
     });
   }
 
@@ -375,12 +428,14 @@ export class App implements OnInit {
       this.tarefas.update(current => 
         current.map(t => t.id === tarefa.id ? res.tarefa : t)
       );
+      if (this.mostrarLogs()) this.carregarLogs();
     });
   }
 
   deleteTarefa(id: number) {
     this.http.delete(`${this.apiUrl}/${id}`).subscribe(() => {
       this.tarefas.update(current => current.filter(t => t.id !== id));
+      if (this.mostrarLogs()) this.carregarLogs();
     });
   }
 
@@ -408,6 +463,7 @@ export class App implements OnInit {
         current.map(t => t.id === tarefa.id ? res.tarefa : t)
       );
       this.cancelarEdicao();
+      if (this.mostrarLogs()) this.carregarLogs();
     });
   }
 }
