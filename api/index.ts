@@ -21,7 +21,7 @@ try {
 // #endregion
 
 import pool, { initDb } from './database.js';
-import { connectMongo, registrarLog } from './mongodb.js';
+import Log, { connectMongo, registrarLog } from './mongodb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -181,6 +181,15 @@ app.delete('/tarefas/:id', async (req, res) => {
     res.json({ message: 'Tarefa removida com sucesso' });
   } catch (error) {
     res.status(500).json({ message: 'Erro ao remover tarefa', error });
+  }
+});
+
+app.get('/logs', async (req, res) => {
+  try {
+    const logs = await Log.find().sort({ timestamp: -1 }).limit(50);
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar logs', error });
   }
 });
 
