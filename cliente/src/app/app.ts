@@ -30,14 +30,34 @@ interface Tarefa {
 
       <ul class="tarefa-list">
         @for (tarefa of tarefas(); track tarefa.id) {
-          <li class="tarefa-item" [class.concluida]="tarefa.concluido">
+          <li class="tarefa-item" [class.concluida]="tarefa.concluido" [class.editando]="tarefaEditando() === tarefa.id">
             <input 
               type="checkbox" 
               [checked]="tarefa.concluido" 
               (change)="toggleTarefa(tarefa)"
+              [disabled]="tarefaEditando() === tarefa.id"
             >
-            <span class="titulo">{{ tarefa.titulo }}</span>
-            <button class="btn-delete" (click)="deleteTarefa(tarefa.id)">Remover</button>
+            
+            @if (tarefaEditando() === tarefa.id) {
+              <input 
+                type="text" 
+                [(ngModel)]="tituloEditando" 
+                class="input-edit"
+                (keyup.enter)="salvarEdicao(tarefa)"
+                (keyup.escape)="cancelarEdicao()"
+                autoFocus
+              >
+              <div class="actions">
+                <button class="btn-save" (click)="salvarEdicao(tarefa)">Salvar</button>
+                <button class="btn-cancel" (click)="cancelarEdicao()">Cancelar</button>
+              </div>
+            } @else {
+              <span class="titulo">{{ tarefa.titulo }}</span>
+              <div class="actions">
+                <button class="btn-edit" (click)="iniciarEdicao(tarefa)">Editar</button>
+                <button class="btn-delete" (click)="deleteTarefa(tarefa.id)">Remover</button>
+              </div>
+            }
           </li>
         } @empty {
           <p>Nenhuma tarefa encontrada.</p>
@@ -80,6 +100,15 @@ interface Tarefa {
     .titulo {
       flex: 1;
     }
+    .input-edit {
+      flex: 1;
+      padding: 5px;
+      font-size: 1rem;
+    }
+    .actions {
+      display: flex;
+      gap: 5px;
+    }
     .btn-delete {
       background: #ff4444;
       color: white;
@@ -91,6 +120,39 @@ interface Tarefa {
     .btn-delete:hover {
       background: #cc0000;
     }
+    .btn-edit {
+      background: #44aaff;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .btn-edit:hover {
+      background: #0088ff;
+    }
+    .btn-save {
+      background: #44bb44;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .btn-save:hover {
+      background: #339933;
+    }
+    .btn-cancel {
+      background: #888;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .btn-cancel:hover {
+      background: #666;
+    }
   `],
 })
 export class App implements OnInit {
@@ -100,6 +162,9 @@ export class App implements OnInit {
 
   tarefas = signal<Tarefa[]>([]);
   novoTitulo = signal('');
+  
+  tarefaEditando = signal<number | null>(null);
+  tituloEditando = signal('');
 
   ngOnInit() {
     this.carregarTarefas();
@@ -135,6 +200,30 @@ export class App implements OnInit {
   deleteTarefa(id: number) {
     this.http.delete(`${this.apiUrl}/${id}`).subscribe(() => {
       this.tarefas.update(current => current.filter(t => t.id !== id));
+    });
+  }
+
+  iniciarEdicao(tarefa: Tarefa) {
+    this.tarefaEditando.set(tarefa.id);
+    this.tituloEditando.set(tarefa.titulo);
+  }
+
+  cancelarEdicao() {
+    this.tarefaEditando.set(null);
+    this.tituloEditando.set('');
+  }
+
+  salvarEdicao(tarefa: Tarefa) {
+    if (!this.tituloEditando().trim()) return;
+
+    this.http.put<{message: string, tarefa: Tarefa}>(`${this.apiUrl}/${tarefa.id}`, {
+      ...tarefa,
+      titulo: this.tituloEditando()
+    }).subscribe(res => {
+      this.tarefas.update(current => 
+        current.map(t => t.id === tarefa.id ? res.tarefa : t)
+      );
+      this.cancelarEdicao();
     });
   }
 }
