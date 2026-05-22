@@ -3,7 +3,25 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+// #region debug-point h1-package-check
+try {
+  fetch('http://127.0.0.1:7777/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'mongo-connection-fail',
+      type: 'log',
+      level: 'info',
+      message: 'API starting, checking mongoose import...',
+      timestamp: new Date().toISOString()
+    })
+  }).catch(() => {});
+} catch (e) {}
+// #endregion
+
 import pool, { initDb } from './database.js';
+import { connectMongo, registrarLog } from './mongodb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,9 +30,11 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORTA_SERVIDOR || 8083;
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/desafio_logs';
 
 // Inicializa o banco de dados
 initDb();
+connectMongo(MONGO_URI);
 
 app.use(cors({
   origin: '*',
@@ -59,6 +79,10 @@ app.post('/tarefas', async (req, res) => {
       [titulo, descricao || '']
     );
     const [newRows]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [result.insertId]);
+    
+    // Registrar Log
+    await registrarLog('CRIAR_TAREFA', result.insertId, { titulo, descricao });
+
     res.status(201).json({
       message: 'Tarefa criada com sucesso',
       tarefa: newRows[0],
@@ -84,6 +108,14 @@ app.put('/tarefas/:id', async (req, res) => {
       [updatedTitulo, updatedDescricao, updatedConcluido, id]
     );
     const [updatedRows]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [id]);
+    
+    // Registrar Log
+    await registrarLog('ATUALIZAR_TAREFA', Number(id), { 
+      titulo: updatedTitulo, 
+      descricao: updatedDescricao, 
+      concluido: updatedConcluido 
+    });
+
     res.json({
       message: 'Tarefa atualizada com sucesso',
       tarefa: updatedRows[0],
@@ -101,6 +133,10 @@ app.patch('/tarefas/:id/complete', async (req, res) => {
       return res.status(404).json({ message: 'Tarefa não encontrada' });
     }
     const [updatedRows]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [id]);
+    
+    // Registrar Log
+    await registrarLog('CONCLUIR_TAREFA', Number(id));
+
     res.json({
       message: 'Tarefa marcada como concluída',
       tarefa: updatedRows[0],
@@ -118,6 +154,10 @@ app.patch('/tarefas/:id/uncomplete', async (req, res) => {
       return res.status(404).json({ message: 'Tarefa não encontrada' });
     }
     const [updatedRows]: any = await pool.query('SELECT * FROM tarefas WHERE id = ?', [id]);
+    
+    // Registrar Log
+    await registrarLog('DESMARCAR_TAREFA', Number(id));
+
     res.json({
       message: 'Tarefa marcada como não concluída',
       tarefa: updatedRows[0],
@@ -134,6 +174,10 @@ app.delete('/tarefas/:id', async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Tarefa não encontrada' });
     }
+
+    // Registrar Log
+    await registrarLog('REMOVER_TAREFA', Number(id));
+
     res.json({ message: 'Tarefa removida com sucesso' });
   } catch (error) {
     res.status(500).json({ message: 'Erro ao remover tarefa', error });
