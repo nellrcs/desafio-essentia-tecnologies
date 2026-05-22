@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "tsx watch index.ts",
+    "dev": "ts-node --esm index.ts",
     "build": "tsc"
   },
   "devDependencies": {
@@ -14,8 +14,6 @@
     "@types/node": "^25.9.1",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
-    "tsx": "^4.22.3",
     "typescript": "^6.0.3"
   },
   "dependencies": {
