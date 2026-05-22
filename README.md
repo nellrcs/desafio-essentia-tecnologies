@@ -2,17 +2,6 @@
 
 Este projeto é um sistema gestão de tarefas (To-Do List) desenvolvido como parte de um desafio técnico. A aplicação conta com autenticação segura e auditoria de logs em múltiplos bancos de dados.
 
-## 📸 Demonstração
-
-### **Tela de Login**
-![Login](prints/login.png)
-
-### **Interface Principal**
-![Interface Principal](prints/tela-app.png)
-
-### **Visualização de Tarefas**
-![Tarefas](prints/image.png)
-
 ---
 
 ## 🚀 Tecnologias Utilizadas
@@ -103,3 +92,13 @@ Os logs de atividade podem ser visualizados diretamente na interface clicando no
 
 ---
 
+## 📸 Demonstração
+
+### **Tela de Login**
+![Login](prints/login.png)
+
+### **Interface Principal**
+![Interface Principal](prints/tela-app.png)
+
+### **Visualização de Tarefas**
+![Tarefas](prints/image.png)
